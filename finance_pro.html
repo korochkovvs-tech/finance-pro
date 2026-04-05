@@ -409,6 +409,9 @@ body.light .advisor{background:linear-gradient(135deg,#fffbf0,#fff5d6);border-co
   <div class="section-label">Карты</div>
   <div id="cards-list"><div class="card"><div class="empty"><span class="empty-icon">💳</span>Нажмите + чтобы добавить</div></div></div>
 
+  <div class="section-label">Накопительные счета</div>
+  <div id="savings-list"><div class="card"><div class="empty"><span class="empty-icon">🏦</span>Нажмите + чтобы добавить</div></div></div>
+
   <div class="section-label">Наличные</div>
   <div class="card" id="cash-block"><div class="empty"><span class="empty-icon">💵</span>Нажмите + чтобы добавить</div></div>
 
@@ -1470,6 +1473,30 @@ function renderAccounts(){
 
   var savEl=document.getElementById('savingsBlocks');
   if(!DB.savings.length){savEl.innerHTML='<div class="card"><div class="empty"><span class="empty-icon">🏦</span>Нажмите + чтобы добавить</div></div>';}
+
+  var savList=document.getElementById('savings-list');
+  if(!savList)return;
+  if(!DB.savings.length){
+    savList.innerHTML='<div class="card"><div class="empty"><span class="empty-icon">🏦</span>Нажмите + чтобы добавить</div></div>';
+  } else {
+    var accrualLabels={daily:'ежедневно',monthly:'ежемесячно',end:'в конце срока'};
+    savList.innerHTML=DB.savings.map(function(s){
+      var inc=calcSavingsIncome(s);
+      var accrualLabel=accrualLabels[s.accrual]||'';
+      return '<div class="savings-block" style="position:relative;">'
+        +'<div style="position:absolute;top:16px;right:16px;display:flex;gap:4px;z-index:1;">'
+        +'<button class="edit-btn" onclick="openEdit(\'savings\','+s.id+')" style="background:var(--bg4);border-radius:8px;padding:6px;">✏️</button>'
+        +'<button class="del-btn" onclick="delSavings('+s.id+')" style="background:var(--bg4);border-radius:8px;padding:6px;">×</button>'
+        +'</div>'
+        +'<div class="sb-header"><div><div class="sb-name">'+s.name+'</div><div class="sb-rate">'+s.rate+'% годовых · '+accrualLabel+'</div></div></div>'
+        +'<div class="sb-balance">'+fmt(s.balance)+'</div>'
+        +'<div class="sb-income-grid">'
+        +'<div class="sb-income-card"><div class="sb-income-label">В день</div><div class="sb-income-val">+'+fmtD(inc.daily)+'</div></div>'
+        +'<div class="sb-income-card"><div class="sb-income-label">В месяц</div><div class="sb-income-val">+'+fmt(inc.monthly)+'</div></div>'
+        +'</div>'
+        +'</div>';
+    }).join('');
+  }
 }
 
 function exportData(){
