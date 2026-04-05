@@ -537,7 +537,7 @@ body.light .advisor{background:linear-gradient(135deg,#fffbf0,#fff5d6);border-co
         <select class="form-select" id="p-repeat"><option value="none">Один раз</option><option value="monthly">Каждый месяц</option><option value="quarterly">Каждый квартал</option><option value="yearly">Каждый год</option></select>
       </div>
       <div class="form-group"><label class="form-label">Тип</label>
-        <select class="form-select" id="p-cat"><option value="credit">Кредитная карта</option><option value="loan">Кредит / рассрочка</option><option value="subscription">Подписка</option><option value="utility">ЖКХ</option><option value="other">Другое</option></select>
+        <select class="form-select" id="p-cat"><option value="loan">Кредит / рассрочка</option><option value="subscription">Подписка</option><option value="utility">ЖКХ</option><option value="other">Другое</option></select>
       </div>
       <div class="form-group"><label class="form-label">Заметка</label><input class="form-input" id="p-note" placeholder="Необязательно"></div>
     </div>
@@ -574,6 +574,15 @@ body.light .advisor{background:linear-gradient(135deg,#fffbf0,#fff5d6);border-co
         <div class="form-hint">Схема А: все снятия цикла должны быть погашены через N дней от первого снятия.<br>Схема Б: каждый перевод имеет свой независимый срок погашения.</div>
       </div>
       <div class="form-divider"></div>
+      <div id="c-payment-wrap" style="display:none">
+        <div class="form-label" style="margin-bottom:10px;">Платёж по карте</div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Сумма к оплате ₽</label><input class="form-input" id="c-pay-amount" type="number" inputmode="decimal" step="0.01" placeholder="0.00"></div>
+          <div class="form-group"><label class="form-label">Дата оплаты</label><input class="form-input" id="c-pay-date" type="date"></div>
+        </div>
+        <div class="form-hint">Сумма включена в общий долг по карте. Используется только как напоминание и в расчёте «Доступно в этом месяце».</div>
+        <div class="form-divider"></div>
+      </div>
       <div class="form-label" style="margin-bottom:10px;">Кэшбек по категориям</div>
       <div id="cb-rows"></div>
       <button class="btn-add-cb" onclick="addCbRow()">+ Добавить категорию кэшбека</button>
@@ -702,6 +711,7 @@ function updateCardTypeFields(){
   var type=document.getElementById('c-type').value;
   document.getElementById('c-bal-label').textContent=type==='debit'?'Остаток ₽':'Долг ₽';
   document.getElementById('c-grace-wrap').style.display=type==='credit'?'block':'none';
+  document.getElementById('c-payment-wrap').style.display=type==='credit'?'block':'none';
 }
 
 function updateGraceSchemeFields(){
@@ -768,6 +778,11 @@ function fillEditForm(type,id){
       document.getElementById('c-grace-max').value=c.graceMax||'';
       document.getElementById('c-grace-period').value=c.gracePeriod||'';
     }
+    if(c.cardType==='credit'){
+      document.getElementById('c-payment-wrap').style.display='block';
+      document.getElementById('c-pay-amount').value=c.payAmount||'';
+      document.getElementById('c-pay-date').value=c.payDate||'';
+    }
     updateCardTypeFields();
     document.getElementById('cb-rows').innerHTML='';
     if(c.cashbacks&&c.cashbacks.length){
@@ -805,13 +820,14 @@ function closeModal(){document.getElementById('overlay').classList.remove('open'
 function overlayClick(e){if(e.target===document.getElementById('overlay'))closeModal();}
 
 function clearForms(){
-  var ids=['inc-amount','inc-note','exp-amount','exp-note','p-name','p-note','c-name','d-name','d-note','b-limit','sav-name','sav-balance','sav-rate','cash-amount','cash-note','c-balance','c-limit','c-grace','c-grace-day','c-grace-max','c-grace-period'];
+  var ids=['inc-amount','inc-note','exp-amount','exp-note','p-name','p-note','c-name','d-name','d-note','b-limit','sav-name','sav-balance','sav-rate','cash-amount','cash-note','c-balance','c-limit','c-grace','c-grace-day','c-grace-max','c-grace-period','c-pay-amount','c-pay-date'];
   ids.forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
   var sel=['p-repeat','p-cat','d-type','sav-accrual','c-type','c-grace-scheme'];
   var defaults={};
   sel.forEach(function(id){var el=document.getElementById(id);if(el)el.selectedIndex=0;});
   document.getElementById('c-grace-fields').style.display='none';
   document.getElementById('c-grace-wrap').style.display='none';
+  document.getElementById('c-payment-wrap').style.display='none';
   setTodayDates();
   initCbRows();
 }
@@ -863,7 +879,7 @@ function saveEntry(){
     var cbs=[];
     document.querySelectorAll('#cb-rows .cb-form-row').forEach(function(row){var cat=row.querySelector('.cb-cat-in').value.trim();var pct=parseFloat(row.querySelector('.cb-pct-in').value)||0;if(cat&&pct>0)cbs.push({cat:cat,pct:pct});});
     var scheme=document.getElementById('c-grace-scheme').value;
-    DB.cards.push({id:Date.now(),name:cname,cardType:document.getElementById('c-type').value,balance:parseFloat(document.getElementById('c-balance').value)||0,limit:parseFloat(document.getElementById('c-limit').value)||0,grace:parseInt(document.getElementById('c-grace').value)||0,graceScheme:scheme,graceDay:parseInt(document.getElementById('c-grace-day').value)||0,graceMax:parseFloat(document.getElementById('c-grace-max').value)||0,gracePeriod:parseInt(document.getElementById('c-grace-period').value)||0,graceUsed:0,graceStart:null,graceOps:[],cashbacks:cbs});
+    DB.cards.push({id:Date.now(),name:cname,cardType:document.getElementById('c-type').value,balance:parseFloat(document.getElementById('c-balance').value)||0,limit:parseFloat(document.getElementById('c-limit').value)||0,grace:parseInt(document.getElementById('c-grace').value)||0,graceScheme:scheme,graceDay:parseInt(document.getElementById('c-grace-day').value)||0,graceMax:parseFloat(document.getElementById('c-grace-max').value)||0,gracePeriod:parseInt(document.getElementById('c-grace-period').value)||0,graceUsed:0,graceStart:null,graceOps:[],payAmount:parseFloat(document.getElementById('c-pay-amount').value)||0,payDate:document.getElementById('c-pay-date').value,cashbacks:cbs});
   } else if(curType==='savings'){
     var sname=document.getElementById('sav-name').value.trim();
     var sbal=parseFloat(document.getElementById('sav-balance').value)||0;
@@ -914,6 +930,8 @@ function updateEntry(){
     c.graceDay=parseInt(document.getElementById('c-grace-day').value)||0;
     c.graceMax=parseFloat(document.getElementById('c-grace-max').value)||0;
     c.gracePeriod=parseInt(document.getElementById('c-grace-period').value)||0;
+    c.payAmount=parseFloat(document.getElementById('c-pay-amount').value)||0;
+    c.payDate=document.getElementById('c-pay-date').value;
     var cbs=[];
     document.querySelectorAll('#cb-rows .cb-form-row').forEach(function(row){var cat=row.querySelector('.cb-cat-in').value.trim();var pct=parseFloat(row.querySelector('.cb-pct-in').value)||0;if(cat&&pct>0)cbs.push({cat:cat,pct:pct});});
     c.cashbacks=cbs;
@@ -1006,22 +1024,79 @@ function calcSavingsIncome(sav){
 
 /* NET BALANCE */
 function calcNetBalance(){
+  var today=new Date();today.setHours(0,0,0,0);
+  var startMonth=new Date(today.getFullYear(),today.getMonth(),1);
+  var endMonth=new Date(today.getFullYear(),today.getMonth()+1,0);endMonth.setHours(23,59,59,999);
+
   var debitBalance=DB.cards.filter(function(c){return c.cardType==='debit';}).reduce(function(s,c){return s+(c.balance||0);},0);
-  var creditDebt=DB.cards.filter(function(c){return c.cardType==='credit';}).reduce(function(s,c){return s+(c.balance||0);},0);
+  var creditDebtTotal=DB.cards.filter(function(c){return c.cardType==='credit';}).reduce(function(s,c){return s+(c.balance||0);},0);
   var cashTotal=DB.cash.reduce(function(s,c){return s+(c.amount||0);},0);
   var savingsTotal=DB.savings.reduce(function(s,sv){return s+(sv.balance||0);},0);
-  var iOwe=DB.debts.filter(function(d){return d.type==='iowe';}).reduce(function(s,d){return s+(d.amount||0);},0);
-  var owedToMe=DB.debts.filter(function(d){return d.type==='owed';}).reduce(function(s,d){return s+(d.amount||0);},0);
-  var today=new Date();today.setHours(0,0,0,0);
-  var endMonth=new Date(today.getFullYear(),today.getMonth()+1,0);
-  var monthPayments=DB.payments.filter(function(p){return !p.paid&&new Date(p.date)<=endMonth;}).reduce(function(s,p){return s+(p.amount||0);},0);
-  var allFuturePayments=DB.payments.filter(function(p){return !p.paid;}).reduce(function(s,p){return s+(p.amount||0);},0);
   var assets=debitBalance+cashTotal+savingsTotal;
-  var liabilities=creditDebt+iOwe;
-  var netWithDebts=assets-liabilities+owedToMe;
-  var availableThisMonth=netWithDebts-monthPayments;
-  var availableAllTime=netWithDebts-allFuturePayments;
-  return{assets:assets,debitBalance:debitBalance,cashTotal:cashTotal,savingsTotal:savingsTotal,creditDebt:creditDebt,iOwe:iOwe,owedToMe:owedToMe,monthPayments:monthPayments,allFuturePayments:allFuturePayments,netWithDebts:netWithDebts,availableThisMonth:availableThisMonth,availableAllTime:availableAllTime};
+
+  // Платежи по кредитным картам в этом месяце (встроенные)
+  var creditPayThisMonth=DB.cards.filter(function(c){
+    return c.cardType==='credit'&&c.payAmount&&c.payDate;
+  }).reduce(function(s,c){
+    var d=new Date(c.payDate);d.setHours(0,0,0,0);
+    return s+(d>=startMonth&&d<=endMonth?c.payAmount:0);
+  },0);
+
+  // Обычные платежи этого месяца (НЕ кредитные карты — они встроены)
+  var regularPayThisMonth=DB.payments.filter(function(p){
+    if(p.paid||p.fromCardId)return false;
+    var d=new Date(p.date);d.setHours(0,0,0,0);
+    return d>=startMonth&&d<=endMonth;
+  }).reduce(function(s,p){return s+(p.amount||0);},0);
+
+  // Все будущие обычные платежи
+  var allFutureRegular=DB.payments.filter(function(p){
+    return !p.paid&&!p.fromCardId;
+  }).reduce(function(s,p){return s+(p.amount||0);},0);
+
+  // Личные долги (я должен) в этом месяце — только с датой в текущем месяце
+  var iOweThisMonth=DB.debts.filter(function(d){
+    if(d.type!=='iowe'||!d.date)return false;
+    var dt=new Date(d.date);dt.setHours(0,0,0,0);
+    return dt>=startMonth&&dt<=endMonth;
+  }).reduce(function(s,d){return s+(d.amount||0);},0);
+
+  // Мне должны в этом месяце — только с датой в текущем месяце
+  var owedToMeThisMonth=DB.debts.filter(function(d){
+    if(d.type!=='owed'||!d.date)return false;
+    var dt=new Date(d.date);dt.setHours(0,0,0,0);
+    return dt>=startMonth&&dt<=endMonth;
+  }).reduce(function(s,d){return s+(d.amount||0);},0);
+
+  // Все личные долги (без фильтра по дате)
+  var iOweAll=DB.debts.filter(function(d){return d.type==='iowe';}).reduce(function(s,d){return s+(d.amount||0);},0);
+  var owedToMeAll=DB.debts.filter(function(d){return d.type==='owed';}).reduce(function(s,d){return s+(d.amount||0);},0);
+
+  // ДОСТУПНО В ЭТОМ МЕСЯЦЕ
+  var availableThisMonth=assets
+    -creditPayThisMonth
+    -iOweThisMonth
+    +owedToMeThisMonth
+    -regularPayThisMonth;
+
+  // ДОСТУПНО ПОСЛЕ ВСЕХ ПЛАТЕЖЕЙ
+  var availableAllTime=assets
+    -creditDebtTotal
+    -iOweAll
+    +owedToMeAll
+    -allFutureRegular;
+
+  return{
+    assets:assets,debitBalance:debitBalance,cashTotal:cashTotal,savingsTotal:savingsTotal,
+    creditDebtTotal:creditDebtTotal,
+    creditPayThisMonth:creditPayThisMonth,
+    regularPayThisMonth:regularPayThisMonth,
+    iOweThisMonth:iOweThisMonth,owedToMeThisMonth:owedToMeThisMonth,
+    iOweAll:iOweAll,owedToMeAll:owedToMeAll,
+    allFutureRegular:allFutureRegular,
+    availableThisMonth:availableThisMonth,
+    availableAllTime:availableAllTime
+  };
 }
 
 function renderAll(){
@@ -1037,27 +1112,32 @@ function colorVal(v){return v>=0?'var(--green2)':'var(--red2)';}
 function renderDash(){
   var nb=calcNetBalance();
   var rows=[
-    {label:'Дебетовые карты',val:nb.debitBalance,color:'var(--blue)'},
-    {label:'Наличные',val:nb.cashTotal,color:'var(--purple)'},
-    {label:'Накопительные счета',val:nb.savingsTotal,color:'var(--teal)'},
-    {label:'Итого активы',val:nb.assets,color:'var(--green2)',bold:true},
-    {label:'Долг по кредитным картам',val:-nb.creditDebt,color:'var(--red2)'},
-    {label:'Личные долги (я должен)',val:-nb.iOwe,color:'var(--red2)'},
-    {label:'Мне должны',val:nb.owedToMe,color:'var(--green2)'},
-    {label:'Чистый баланс',val:nb.netWithDebts,color:colorVal(nb.netWithDebts),bold:true,big:true},
-    {label:'Платежи этого месяца',val:-nb.monthPayments,color:'var(--orange2)'},
-    {label:'Доступно в этом месяце',val:nb.availableThisMonth,color:colorVal(nb.availableThisMonth),bold:true},
-    {label:'Все будущие платежи',val:-nb.allFuturePayments,color:'var(--orange2)'},
-    {label:'Доступно после всех платежей',val:nb.availableAllTime,color:colorVal(nb.availableAllTime),bold:true,big:true}
+    {label:'Дебетовые карты',val:nb.debitBalance,color:'var(--blue)',sign:''},
+    {label:'Наличные',val:nb.cashTotal,color:'var(--purple)',sign:''},
+    {label:'Накопительные счета',val:nb.savingsTotal,color:'var(--teal)',sign:''},
+    {label:'Итого активы',val:nb.assets,color:'var(--green2)',bold:true,sign:''},
+    null,
+    {label:'— Платёж по кред. картам (этот мес.)',val:nb.creditPayThisMonth,color:'var(--red2)',sign:'-'},
+    {label:'— Личные долги (этот мес.)',val:nb.iOweThisMonth,color:'var(--red2)',sign:'-'},
+    {label:'+ Мне должны (этот мес.)',val:nb.owedToMeThisMonth,color:'var(--green2)',sign:'+'},
+    {label:'— Платежи этого месяца (ЖКХ, подписки)',val:nb.regularPayThisMonth,color:'var(--orange2)',sign:'-'},
+    {label:'Доступно в этом месяце',val:nb.availableThisMonth,color:colorVal(nb.availableThisMonth),bold:true,big:true,sign:''},
+    null,
+    {label:'— Весь долг по кред. картам',val:nb.creditDebtTotal,color:'var(--red2)',sign:'-'},
+    {label:'— Все личные долги',val:nb.iOweAll,color:'var(--red2)',sign:'-'},
+    {label:'+ Все долги мне',val:nb.owedToMeAll,color:'var(--green2)',sign:'+'},
+    {label:'— Все будущие платежи (ЖКХ, подписки)',val:nb.allFutureRegular,color:'var(--orange2)',sign:'-'},
+    {label:'Доступно после всех платежей',val:nb.availableAllTime,color:colorVal(nb.availableAllTime),bold:true,big:true,sign:''}
   ];
   var html='<div class="nb-title">📊 Полная картина</div>';
   rows.forEach(function(r){
+    if(r===null){html+='<div style="height:8px;"></div>';return;}
     var cls='nb-row'+(r.bold?' total':'');
     var valCls='nb-val'+(r.big?' big':'');
     var lCls='nb-label'+(r.bold?' main':'');
-    var sign=r.val>=0?'+':'-';
-    if(r.label.indexOf('активы')>=0||r.label.indexOf('Наличные')>=0||r.label.indexOf('Дебетовые')>=0||r.label.indexOf('Накопит')>=0||r.label.indexOf('Мне должны')>=0)sign='';
-    html+='<div class="'+cls+'"><div class="'+lCls+'">'+r.label+'</div><div class="'+valCls+'" style="color:'+r.color+'">'+sign+fmt(Math.abs(r.val))+'</div></div>';
+    var displaySign=r.sign||'';
+    var displayVal=r.sign==='-'?'-'+fmt(r.val):r.sign==='+'?'+'+fmt(r.val):fmt(r.val);
+    html+='<div class="'+cls+'"><div class="'+lCls+'">'+r.label+'</div><div class="'+valCls+'" style="color:'+r.color+'">'+displayVal+'</div></div>';
   });
   document.getElementById('netBalanceBlock').innerHTML=html;
 
@@ -1097,10 +1177,22 @@ function renderDash(){
     +'</div>';
   }
 
-  var upcoming=DB.payments.filter(function(p){return !p.paid&&daysLeft(p.date)>=0;}).sort(function(a,b){return new Date(a.date)-new Date(b.date);}).slice(0,4);
+  var cardPaysDash=DB.cards.filter(function(c){return c.cardType==='credit'&&c.payAmount&&c.payDate;}).map(function(c){
+    return {id:'card_'+c.id,name:'💳 '+c.name,amount:c.payAmount,date:c.payDate,cat:'credit',note:'Платёж по карте',paid:false,fromCardId:c.id};
+  });
+  var upcoming=DB.payments.concat(cardPaysDash).filter(function(p){return !p.paid&&daysLeft(p.date)>=0;}).sort(function(a,b){return new Date(a.date)-new Date(b.date);}).slice(0,5);
   var dp=document.getElementById('dash-payments');
   if(!upcoming.length){dp.innerHTML='<div class="empty"><span class="empty-icon">💳</span>Нет платежей</div>';}
-  else{dp.innerHTML=upcoming.map(function(p){return renderPayItem(p,false);}).join('');}
+  else{dp.innerHTML=upcoming.map(function(p){
+    var dl=daysLeft(p.date);
+    var dcls=dl<0?'d-urgent':dl<=3?'d-warn':'d-ok';
+    var dtxt=dl===0?'сегодня':dl===1?'завтра':'через '+dl+' дн.';
+    return '<div class="pay-item">'
+      +'<div class="p-icon" style="'+(p.fromCardId?'border-color:var(--gold);cursor:default;':'')+'">'+catEmoji(p.cat)+'</div>'
+      +'<div class="p-info"><div class="p-name">'+p.name+'</div><div class="p-meta">'+fmtDate(p.date)+(p.note?' · '+p.note:'')+'</div></div>'
+      +'<div><div class="p-amount">'+fmt(p.amount)+'</div><div class="p-days '+dcls+'">'+dtxt+'</div></div>'
+      +'</div>';
+  }).join('');}
 
   var al=document.getElementById('alertEl');
   var overdue=DB.payments.filter(function(p){return !p.paid&&daysLeft(p.date)<0;});
@@ -1261,12 +1353,32 @@ function renderBudgets(){
 
 function renderAccounts(){
   var ap=document.getElementById('all-payments');
-  if(!DB.payments.length){ap.innerHTML='<div class="empty"><span class="empty-icon">📅</span>Нажмите + чтобы добавить</div>';}
+  // Встроенные платежи кредитных карт
+  var cardPayments=DB.cards.filter(function(c){return c.cardType==='credit'&&c.payAmount&&c.payDate;}).map(function(c){
+    return {id:'card_'+c.id,name:'💳 '+c.name,amount:c.payAmount,date:c.payDate,cat:'credit',note:'Платёж по карте',paid:false,fromCardId:c.id};
+  });
+  var allPayments=DB.payments.concat(cardPayments);
+  if(!allPayments.length){ap.innerHTML='<div class="empty"><span class="empty-icon">📅</span>Нажмите + чтобы добавить</div>';}
   else{
-    var sorted=DB.payments.slice().sort(function(a,b){return new Date(a.date)-new Date(b.date);});
-    var totalPending=DB.payments.filter(function(p){return !p.paid;}).reduce(function(s,p){return s+p.amount;},0);
-    ap.innerHTML=sorted.map(function(p){return renderPayItem(p,true);}).join('')
-      +'<div class="total-row"><span class="total-label">К оплате</span><span class="total-val">'+fmt(totalPending)+'</span></div>';
+    var sorted=allPayments.slice().sort(function(a,b){return new Date(a.date)-new Date(b.date);});
+    var totalPending=allPayments.filter(function(p){return !p.paid;}).reduce(function(s,p){return s+(p.amount||0);},0);
+    ap.innerHTML=sorted.map(function(p){
+      var dl=daysLeft(p.date);
+      var dcls=p.paid?'d-paid':dl<0?'d-urgent':dl<=3?'d-warn':'d-ok';
+      var dtxt=p.paid?'оплачено':dl<0?'просрочено '+Math.abs(dl)+' дн.':dl===0?'сегодня':dl===1?'завтра':'через '+dl+' дн.';
+      var isCardPay=!!p.fromCardId;
+      var acts=isCardPay
+        ?'<div class="act-btns"><button class="edit-btn" onclick="openEdit(\'card\','+p.fromCardId+')" title="Редактировать карту">✏️</button></div>'
+        :'<div class="act-btns"><button class="edit-btn" onclick="openEdit(\'payment\','+p.id+')">✏️</button><button class="del-btn" onclick="delPayment('+p.id+')">×</button></div>';
+      var iconStyle=isCardPay?'border-color:var(--gold);cursor:default;':p.paid?'border-color:var(--green);':'';
+      var iconClick=isCardPay?'':'onclick="togglePaid('+p.id+')"';
+      var icon=p.paid?'✓':catEmoji(p.cat);
+      return '<div class="pay-item'+(p.paid?' paid-item':'')+'">'
+        +'<div class="p-icon" '+iconClick+' style="'+iconStyle+'">'+icon+'</div>'
+        +'<div class="p-info"><div class="p-name">'+p.name+pillHTML(p.repeat||'none')+'</div><div class="p-meta">'+fmtDate(p.date)+(p.note?' · '+p.note:'')+'</div></div>'
+        +'<div style="display:flex;align-items:center;gap:6px;"><div><div class="p-amount">'+fmt(p.amount)+'</div><div class="p-days '+dcls+'">'+dtxt+'</div></div>'+acts+'</div>'
+        +'</div>';
+    }).join('')+'<div class="total-row"><span class="total-label">К оплате</span><span class="total-val">'+fmt(totalPending)+'</span></div>';
   }
 
   var cardColors=['#c8a84a','#4e7ee8','#3dab6e','#8b68e0','#d87238','#e05050','#20b2aa','#c06080'];
